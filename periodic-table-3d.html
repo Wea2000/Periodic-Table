@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Periodic Table Auto Layout Animation</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{color-scheme:dark}
+*{box-sizing:border-box;margin:0}
+html,body{height:100%;background:#000;overflow:hidden;font-family:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;touch-action:none}
+#bar{position:fixed;top:calc(14px + env(safe-area-inset-top,0px));left:0;right:0;display:flex;justify-content:center;gap:8px;z-index:5}
+button{font:inherit;font-size:13px;color:#fff;background:rgba(127,127,127,.28);border:0;padding:6px 12px;border-radius:4px;cursor:pointer}
+button.on{background:rgba(225,225,225,.85);color:#222}
+#stage{position:fixed;inset:0;perspective:1200px;cursor:grab}
+#scene{position:absolute;left:50%;top:50%;width:0;height:0;transform-style:preserve-3d}
+.t{position:absolute;width:120px;height:160px;margin:-80px 0 0 -60px;border:1px solid rgba(var(--c),.6);background:rgba(var(--c),var(--a));box-shadow:0 0 14px rgba(var(--c),.45);color:rgb(var(--l));text-align:center;font-weight:700;user-select:none;-webkit-user-select:none}
+.t i{position:absolute;top:8px;right:10px;font-style:normal;font-size:13px;font-weight:400;opacity:.85}
+.t b{position:absolute;left:0;right:0;top:38px;font-size:56px;text-shadow:0 0 8px rgba(var(--c),.9)}
+.t s{position:absolute;left:0;right:0;bottom:14px;font-size:13px;text-decoration:none;font-weight:400;opacity:.9}
+#ov{position:fixed;inset:0;z-index:10;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.8);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);padding:16px;overflow:auto;opacity:0;pointer-events:none;transition:opacity .35s;touch-action:pan-y}
+#ov.show{opacity:1;pointer-events:auto}
+#cl{position:fixed;top:calc(14px + env(safe-area-inset-top,0px));right:14px;z-index:11}
+#cd{width:min(92vw,420px);margin:auto;color:rgb(var(--l));font-family:system-ui,"Segoe UI",Tahoma,"Noto Sans Arabic",sans-serif}
+.hd{position:relative;height:190px;border:1px solid rgba(var(--c),.7);background:rgba(var(--c),.25);box-shadow:0 0 28px rgba(var(--c),.55);text-align:center;font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:700}
+.hd i{position:absolute;top:12px;right:16px;font-style:normal;font-size:18px;font-weight:400;opacity:.85}
+.hd b{position:absolute;left:0;right:0;top:34px;font-size:96px;text-shadow:0 0 14px rgba(var(--c),.95)}
+.hd s{position:absolute;left:0;right:0;bottom:16px;font-size:18px;text-decoration:none;font-weight:400}
+#exs{transition:opacity .4s .25s}
+.lb{margin:16px 0 10px;font-size:14px;opacity:.85;text-align:center}
+.ex{border:1px solid rgba(var(--c),.55);background:rgba(var(--c),.14);box-shadow:0 0 12px rgba(var(--c),.3);padding:11px 14px;margin-bottom:8px;font-size:16px;direction:rtl;text-align:right;line-height:1.5}
+#zm{position:fixed;right:14px;bottom:calc(18px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:8px;z-index:5}
+#zm button{width:44px;height:44px;font-size:22px;padding:0;line-height:1}
+#hint{position:fixed;left:0;right:0;bottom:calc(14px + env(safe-area-inset-bottom,0px));text-align:center;font:12px system-ui,Tahoma,sans-serif;color:#9a9a9a;pointer-events:none;direction:rtl;transition:opacity 1s;z-index:4}
+#lg{position:fixed;left:14px;bottom:calc(18px + env(safe-area-inset-bottom,0px));z-index:5;height:44px;padding:0 14px;font-family:system-ui,Tahoma,"Noto Sans Arabic",sans-serif;font-size:14px}
+.ar .t s,.ar .hd s{font-family:system-ui,Tahoma,"Noto Sans Arabic",sans-serif}
+body:not(.ar) .ex{direction:ltr;text-align:left}
+</style></head><body>
+<div id="bar"><button data-m="table">table</button><button data-m="sphere">sphere</button><button data-m="helix">helix</button><button data-m="grid">grid</button></div>
+<div id="stage"><div id="scene"></div></div>
+<button id="lg">العربية</button><div id="zm"><button data-z="1.3">+</button><button data-z="0.77">−</button><button data-z="0">⟲</button></div>
+<div id="hint">اضغط على عنصر • اسحب للتحريك • قرّب بإصبعين أو بالعجلة</div>
+<div id="ov"><button id="cl">✕</button><div id="cd"><div class="hd"></div><div id="exs"><div class="lb">أمثلة من الحياة الواقعية</div><div id="lst"></div></div></div></div>
+<script>
+const N="H Hydrogen,He Helium,Li Lithium,Be Beryllium,B Boron,C Carbon,N Nitrogen,O Oxygen,F Fluorine,Ne Neon,Na Sodium,Mg Magnesium,Al Aluminium,Si Silicon,P Phosphorus,S Sulfur,Cl Chlorine,Ar Argon,K Potassium,Ca Calcium,Sc Scandium,Ti Titanium,V Vanadium,Cr Chromium,Mn Manganese,Fe Iron,Co Cobalt,Ni Nickel,Cu Copper,Zn Zinc,Ga Gallium,Ge Germanium,As Arsenic,Se Selenium,Br Bromine,Kr Krypton,Rb Rubidium,Sr Strontium,Y Yttrium,Zr Zirconium,Nb Niobium,Mo Molybdenum,Tc Technetium,Ru Ruthenium,Rh Rhodium,Pd Palladium,Ag Silver,Cd Cadmium,In Indium,Sn Tin,Sb Antimony,Te Tellurium,I Iodine,Xe Xenon,Cs Caesium,Ba Barium,La Lanthanum,Ce Cerium,Pr Praseodymium,Nd Neodymium,Pm Promethium,Sm Samarium,Eu Europium,Gd Gadolinium,Tb Terbium,Dy Dysprosium,Ho Holmium,Er Erbium,Tm Thulium,Yb Ytterbium,Lu Lutetium,Hf Hafnium,Ta Tantalum,W Tungsten,Re Rhenium,Os Osmium,Ir Iridium,Pt Platinum,Au Gold,Hg Mercury,Tl Thallium,Pb Lead,Bi Bismuth,Po Polonium,At Astatine,Rn Radon,Fr Francium,Ra Radium,Ac Actinium,Th Thorium,Pa Protactinium,U Uranium,Np Neptunium,Pu Plutonium,Am Americium,Cm Curium,Bk Berkelium,Cf Californium,Es Einsteinium,Fm Fermium,Md Mendelevium,No Nobelium,Lr Lawrencium,Rf Rutherfordium,Db Dubnium,Sg Seaborgium,Bh Bohrium,Hs Hassium,Mt Meitnerium,Ds Darmstadtium,Rg Roentgenium,Cn Copernicium,Nh Nihonium,Fl Flerovium,Mc Moscovium,Lv Livermorium,Ts Tennessine,Og Oganesson".split(",").map(s=>s.split(" "));
+const RED=new Set([1,2,6,7,8,9,10,15,16,17,18,34,35,36,53,54,85,86]);
+const YEL=new Set([3,4,5,11,12,13,14,19,20,31,32,33,37,38,49,50,51,52,55,56,81,82,83,84,87,88]);
+const COL={R:["255,70,70","255,150,150"],Y:["232,172,30","255,226,110"],G:["60,220,90","150,255,165"],T:["30,210,190","120,255,236"]};
+const key=n=>n>=104?"T":RED.has(n)?"R":YEL.has(n)?"Y":"G";
+const pos=n=>n<=2?[1,n==1?1:18]:n<=4?[2,n-2]:n<=10?[2,n+8]:n<=12?[3,n-10]:n<=18?[3,n]:n<=36?[4,n-18]:n<=54?[5,n-36]:n<=56?[6,n-54]:n<=71?[9,n-54]:n<=86?[6,n-68]:n<=88?[7,n-86]:n<=103?[10,n-86]:[7,n-100];
+const PI=Math.PI,L=N.length;
+const LAY={
+ table:i=>{const[r,c]=pos(i+1);return{x:c*140-1330,y:r*180-990,z:0,rx:0,ry:0}},
+ sphere:i=>{const phi=Math.acos(-1+2*i/L),a=Math.sqrt(L*PI)*phi,e=PI/2-phi,R=800;return{x:R*Math.cos(e)*Math.sin(a),y:-R*Math.sin(e),z:R*Math.cos(e)*Math.cos(a),rx:e,ry:a}},
+ helix:i=>{const t=i*.175+PI,R=900;return{x:R*Math.sin(t),y:i*8-450,z:R*Math.cos(t),rx:0,ry:t}},
+ grid:i=>({x:(i%5)*320-640,y:(Math.floor(i/5)%5)*300-600,z:Math.floor(i/25)*500-1000,rx:0,ry:0})
+};
+const scene=document.getElementById("scene"),btns=[...document.querySelectorAll("#bar button")];
+const rnd=a=>(Math.random()-.5)*a;
+const tiles=N.map(([s,nm],i)=>{
+ const n=i+1,[c,l]=COL[key(n)],d=document.createElement("div");
+ d.className="t";d.dataset.i=i;d.style.cssText=`--c:${c};--l:${l};--a:${(.12+Math.random()*.35).toFixed(2)}`;
+ d.innerHTML=`<i>${n}</i><b>${s}</b><s>${nm}</s>`;scene.appendChild(d);
+ return{d,c:{x:rnd(4000),y:rnd(4000),z:rnd(4000),rx:rnd(6),ry:rnd(6)},f:null,to:null,t0:0};
+});
+const wrap=a=>a-2*PI*Math.round(a/(2*PI)),ease=p=>p<.5?4*p*p*p:1-Math.pow(-2*p+2,3)/2;
+let mode="",rot={x:0,y:0},zoom=1,drag=false,resetAt=0,S=.4,sel=false,dt=null,sx=0,sy=0,pan={x:0,y:0},ptrs=new Map(),t0=0,moved=false,pd=0;
+function fit(){S=Math.max(.12,Math.min(innerWidth*.94/2520,innerHeight*.88/1850))}
+function go(m){
+ mode=m;pan.x=pan.y=0;btns.forEach(b=>b.classList.toggle("on",b.dataset.m==m));resetAt=performance.now();
+ tiles.forEach((t,i)=>{const T=LAY[m](i);t.f={...t.c};T.rx=t.c.rx+wrap(T.rx-t.c.rx);T.ry=t.c.ry+wrap(T.ry-t.c.ry);t.to=T;t.t0=performance.now()+Math.random()*500});
+}
+function frame(now){
+ for(const t of tiles){
+  const p=Math.max(0,Math.min(1,(now-t.t0)/1600)),e=ease(p),c=t.c,f=t.f,T=t.to;
+  for(const k in T)c[k]=f[k]+(T[k]-f[k])*e;
+  t.d.style.transform=`translate3d(${c.x}px,${c.y}px,${c.z}px) rotateY(${c.ry}rad) rotateX(${c.rx}rad)`;
+ }
+ if(!drag&&!sel){
+  const settle=mode=="table"||mode=="grid"||now-resetAt<2200;
+  if(settle){rot.x*=.9;rot.y+=(Math.round(rot.y/(2*PI))*2*PI-rot.y)*.08}
+  else rot.y+=.003;
+ }
+ scene.style.transform=`translate(${pan.x}px,${pan.y}px) scale3d(${S*zoom},${S*zoom},${S*zoom}) rotateX(${rot.x}rad) rotateY(${rot.y}rad)`;
+ requestAnimationFrame(frame);
+}
+btns.forEach(b=>b.onclick=()=>go(b.dataset.m));
+const st=document.getElementById("stage");let lx=0,ly=0;
+st.onpointerdown=e=>{if(e.pointerType=="mouse")ptrs.clear();st.setPointerCapture(e.pointerId);ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});drag=true;if(ptrs.size==1){sx=e.clientX;sy=e.clientY;t0=Date.now();moved=false}else{moved=true;pd=dist()}st.style.cursor="grabbing"};
+const dist=()=>{const a=[...ptrs.values()];return a.length>1?Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y):0};
+const mid=()=>{const a=[...ptrs.values()];return a.length>1?{x:(a[0].x+a[1].x)/2,y:(a[0].y+a[1].y)/2}:{x:0,y:0}};
+function zoomAt(f,cx,cy){const nz=Math.max(.3,Math.min(5,zoom*f)),k=nz/zoom;pan.x=(pan.x-cx)*k+cx;pan.y=(pan.y-cy)*k+cy;zoom=nz}
+function pick(x,y){let b=null,bd=1e9,ba=0;for(const t of tiles){const r=t.d.getBoundingClientRect();if(!r.width)continue;const dx=Math.max(r.left-x,0,x-r.right),dy=Math.max(r.top-y,0,y-r.bottom),d=Math.hypot(dx,dy),a=r.width*r.height;if(d<=24&&(d<bd-.5||(Math.abs(d-bd)<=.5&&a>ba))){bd=d;ba=a;b=t.d}}return b}
+st.onpointermove=e=>{const p=ptrs.get(e.pointerId);if(!p)return;
+ if(ptrs.size==1){const dx=e.clientX-p.x,dy=e.clientY-p.y;if(Math.hypot(e.clientX-sx,e.clientY-sy)>16)moved=true;
+  if(mode=="table"||e.shiftKey||e.buttons==2){pan.x+=dx;pan.y+=dy}else{rot.y+=dx*.005;rot.x=Math.max(-1.4,Math.min(1.4,rot.x-dy*.005))}
+  p.x=e.clientX;p.y=e.clientY}
+ else{const m0=mid();p.x=e.clientX;p.y=e.clientY;const m1=mid(),d1=dist();pan.x+=m1.x-m0.x;pan.y+=m1.y-m0.y;if(pd>0&&d1>0)zoomAt(d1/pd,m1.x-innerWidth/2,m1.y-innerHeight/2);pd=d1}};
+st.onpointerup=st.onpointercancel=e=>{const was=ptrs.size;ptrs.delete(e.pointerId);if(ptrs.size==0){drag=false;st.style.cursor="grab";if(e.type=="pointerup"&&!moved&&was==1&&Date.now()-t0<1200){const d=pick(e.clientX,e.clientY);if(d)openEl(+d.dataset.i,d)}}else pd=dist()};
+
+st.onwheel=e=>{e.preventDefault();zoomAt(e.deltaY>0?.9:1.1,e.clientX-innerWidth/2,e.clientY-innerHeight/2)};
+document.querySelectorAll("#zm button").forEach(b=>b.onclick=()=>{const z=+b.dataset.z;if(!z){zoom=1;pan.x=pan.y=0}else zoomAt(z,0,0)});
+addEventListener("keydown",e=>{if(e.key=="+"||e.key=="=")zoomAt(1.2,0,0);if(e.key=="-")zoomAt(.83,0,0);if(e.key=="0"){zoom=1;pan.x=pan.y=0}});
+st.oncontextmenu=e=>e.preventDefault();
+st.onlostpointercapture=e=>{ptrs.delete(e.pointerId);if(!ptrs.size){drag=false;st.style.cursor="grab"}};
+addEventListener("blur",()=>{ptrs.clear();drag=false});
+setTimeout(()=>document.getElementById("hint").style.opacity=0,7000);
+const X="وقود صواريخ الفضاء|سيارات الهيدروجين|الماء H₂O;بالونات الحفلات|تبريد أجهزة MRI|غاز الغوص العميق;بطاريات الجوال|السيارات الكهربائية|أدوية الاستقرار المزاجي;نوافذ أجهزة الأشعة|مرايا تلسكوب جيمس ويب|مكوّنات الطائرات;زجاج بايركس|منظفات البوراكس|أسمدة النباتات;الألماس والجرافيت|أقلام الرصاص|الفحم والوقود;78% من هواء الجو|الأسمدة|حفظ الأغذية بالتجميد;التنفس|أسطوانات الأكسجين الطبية|لحام وقطع المعادن;معجون الأسنان|مقالي التفلون|غاز تبريد;لافتات النيون|مصابيح الإعلانات|الليزر;ملح الطعام|مصابيح الشوارع البرتقالية|الصابون;الألعاب النارية البيضاء|هياكل السيارات الخفيفة|المكملات الغذائية;علب المشروبات|ورق الألمنيوم|هياكل الطائرات;رقائق المعالجات|الألواح الشمسية|الرمل والزجاج;رؤوس أعواد الثقاب|الأسمدة|عظام الجسم والـDNA;البارود|إطارات السيارات|رائحة البيض الفاسد;تعقيم المسابح|المبيّض (كلوركس)|ملح الطعام;داخل المصابيح|لحام الستانلس|حفظ الوثائق القديمة;الموز|الأسمدة|عمل الأعصاب والعضلات;الحليب والعظام|الإسمنت والجبس|الطباشير;مصابيح الملاعب|سبائك الدراجات|معدات رياضية;مفاصل اصطناعية|هياكل الطائرات|ساعات فاخرة;فولاذ مفاتيح الربط|بطاريات التدفق|سبائك قوية;طلاء الجنوط اللامع|الستانلس ستيل|لون الياقوت الأحمر;فولاذ السكك الحديدية|البطاريات القلوية|علب المعلبات;الدم (الهيموغلوبين)|هياكل المباني|السيارات والجسور;الخزف الأزرق|بطاريات الليثيوم|المغناطيسات;العملات المعدنية|الستانلس ستيل|بطاريات السيارات الهجينة;أسلاك الكهرباء|أواني الطبخ|العملات;جلفنة الحديد|كريمات الشمس|مكملات المناعة;يذوب في كف اليد|شاشات LED|شرائح الجوال;كابلات الألياف|كاميرات الحرارة|الترانزستورات الأولى;مبيدات قديمة|رقائق LED|سم الروايات البوليسية;شامبو القشرة|آلات التصوير|مكمل غذائي;مثبطات اللهب|مياه المسابح|الأصباغ;مصابيح الكاميرات|ليزر الأبحاث|نوافذ العزل;الساعات الذرية|ألعاب نارية بنفسجية|أبحاث الطب;الألعاب النارية الحمراء|شاشات تلفاز قديمة|مغناطيسات;ليزر YAG|شاشات التلفاز|مصابيح LED البيضاء;غلاف الوقود النووي|مجوهرات الزركون|تيجان الأسنان;أجهزة MRI|مغناطيس فائق|المجوهرات;فولاذ الأدوات|محركات الطائرات|زيوت التشحيم;أشهر مادة للتصوير الطبي النووي|أول عنصر اصطناعي في التاريخ;أقلام الحبر الفاخرة|الدوائر الإلكترونية|أقراص التخزين;عوادم السيارات|مجوهرات لامعة|من أغلى المعادن;محول عادم السيارة|الجوالات|حشوات الأسنان;المجوهرات|المرايا|الألواح الشمسية;بطاريات النيكل-كادميوم|أصباغ الرسامين|سام جداً;شاشات اللمس|الشاشات المسطحة|لحام معادن;علب الصفيح|لحام الإلكترونيات|البرونز;مثبطات اللهب|بطاريات|حروف الطباعة القديمة;الألواح الشمسية|الأقراص القابلة للكتابة|تبريد كهربائي;معقّم اليود|الملح المُيَوَّد|الغدة الدرقية;مصابيح سيارات زينون|محركات المركبات الفضائية|التخدير الطبي;الساعات الذرية|حفر آبار النفط|تعريف الثانية الزمنية;وجبة الباريوم قبل الأشعة|ألعاب نارية خضراء|الطلاء الأبيض;عدسات الكاميرات|البطاريات الهجينة|مصابيح الاستوديو;حجر القداحة|محول العادم|تلميع الزجاج;لون الزجاج الأخضر|مغناطيسات|نظارات اللحام;أقوى المغناطيسات|سماعات الأذن|توربينات الرياح;ساعات مضيئة قديمة|بطاريات نووية صغيرة;مغناطيسات قوية|ليزر|السماعات;أحمر شاشات التلفاز|حبر الأوراق النقدية|يتوهج على عملة اليورو;مادة تباين الرنين المغناطيسي|أقراص الحاسوب|شاشات;لون المصابيح الأخضر|شاشات الأجهزة|أجهزة الليزر;مغناطيسات المحركات|قضبان المفاعلات|الأقراص;أقوى مجال مغناطيسي|ليزر طبي|ألوان الزجاج;ألياف الإنترنت الضوئية|ليزر الجلدية|زجاج وردي;أجهزة أشعة محمولة|ليزر جراحي;الساعات الذرية الدقيقة|الليزر|الفولاذ;تصوير PET للأورام|مصابيح|أحجار;رقاقات الحاسوب|قضبان التحكم النووية|قطع البلازما;مكثفات الجوالات|الأجهزة الطبية|محركات الطائرات;فتيل المصابيح|رؤوس الحفر|كرة قلم الحبر;محركات الطائرات النفاثة|مصابيح|أقراص;من أثقل العناصر كثافة|أطراف الأقلام|بصمات;شمعات الإشعال|أطراف الأقلام|سبائك;المجوهرات|محول العادم|أدوية السرطان;المجوهرات والسبائك|الإلكترونيات|الأسنان;مقياس الحرارة القديم|مصابيح الفلورسنت|حشوات الأسنان قديماً;مستشعرات الأشعة تحت الحمراء|فحوص القلب النووية|سام جداً;بطاريات السيارات|الحماية من الأشعة|أثقال الغوص;دواء المعدة (بيبتو بيسمول)|مستحضرات التجميل|سبائك سهلة الذوبان;مزيلات الكهرباء الساكنة|سم شديد|اكتشفته ماري كوري;أندر عنصر على الأرض|أبحاث علاج السرطان;غاز مشع في الأقبية|رصد الزلازل|كاشفات;أندر العناصر في الطبيعة|لا استخدام تجاري;ساعات مضيئة قديمة|العلاج الإشعاعي|اكتشفته ماري كوري;علاج السرطان|مصدر نيوترونات;وقود نووي مستقبلي|فوانيس التخييم القديمة|سبائك;نادر جداً|أبحاث نووية;الطاقة النووية|ألوان الزجاج القديم|الغواصات النووية;مكوّن نووي|أبحاث;بطاريات المسابير الفضائية|الطاقة النووية;كاشفات الدخان;طاقة المركبات الفضائية|أبحاث;أبحاث العناصر الجديدة;كشف النفط والمعادن|بدء المفاعلات;أبحاث نووية|اكتُشف في غبار تجربة;أبحاث نووية;سُمّي نسبة لمندليف;سُمّي نسبة لألفريد نوبل;أبحاث فقط;سُمّي نسبة لرذرفورد;سُمّي نسبة لمدينة دوبنا;سُمّي نسبة لسيبورغ;سُمّي نسبة لنيلز بور;سُمّي نسبة لولاية هسن;سُمّي نسبة لليز مايتنر;سُمّي نسبة لدارمشتات;سُمّي نسبة لرونتجن;سُمّي نسبة لكوبرنيكوس;أول عنصر تكتشفه اليابان;سُمّي نسبة لمختبر فليروف;سُمّي نسبة لموسكو;سُمّي نسبة لمختبر ليفرمور;سُمّي نسبة لولاية تينيسي;أثقل عنصر معروف".split(";");
+const ov=document.getElementById("ov"),cd=document.getElementById("cd"),hd=cd.querySelector(".hd"),exs=document.getElementById("exs"),lst=document.getElementById("lst");
+const AR="الهيدروجين,الهيليوم,الليثيوم,البيريليوم,البورون,الكربون,النيتروجين,الأكسجين,الفلور,النيون,الصوديوم,المغنيسيوم,الألومنيوم,السيليكون,الفوسفور,الكبريت,الكلور,الأرجون,البوتاسيوم,الكالسيوم,السكانديوم,التيتانيوم,الفاناديوم,الكروم,المنغنيز,الحديد,الكوبالت,النيكل,النحاس,الزنك,الغاليوم,الجرمانيوم,الزرنيخ,السيلينيوم,البروم,الكريبتون,الروبيديوم,السترونشيوم,الإتريوم,الزركونيوم,النيوبيوم,الموليبدينوم,التكنيشيوم,الروثينيوم,الروديوم,البلاديوم,الفضة,الكادميوم,الإنديوم,القصدير,الأنتيمون,التيلوريوم,اليود,الزينون,السيزيوم,الباريوم,اللانثانوم,السيريوم,البراسيوديميوم,النيوديميوم,البروميثيوم,السماريوم,اليوروبيوم,الجادولينيوم,التيربيوم,الديسبروسيوم,الهولميوم,الإربيوم,الثوليوم,الإتربيوم,اللوتيتيوم,الهافنيوم,التنتالوم,التنغستن,الرينيوم,الأوزميوم,الإيريديوم,البلاتين,الذهب,الزئبق,الثاليوم,الرصاص,البزموت,البولونيوم,الأستاتين,الرادون,الفرانسيوم,الراديوم,الأكتينيوم,الثوريوم,البروتاكتينيوم,اليورانيوم,النبتونيوم,البلوتونيوم,الأميريسيوم,الكوريوم,البركيليوم,الكاليفورنيوم,الأينشتاينيوم,الفيرميوم,المندليفيوم,النوبليوم,اللورنسيوم,الرذرفورديوم,الدوبنيوم,السيبورغيوم,البوريوم,الهاسيوم,الميتنيريوم,الدارمشتاتيوم,الرونتجينيوم,الكوبرنيسيوم,النيهونيوم,الفليروفيوم,الموسكوفيوم,الليفرموريوم,التينيسين,الأوغانيسون".split(",");
+const XE="Rocket fuel|Hydrogen cars|Water (H₂O);Party balloons|Cooling MRI machines|Deep-dive breathing gas;Phone batteries|Electric cars|Mood-stabilizing medication;X-ray machine windows|James Webb telescope mirrors|Aircraft parts;Pyrex glass|Borax cleaners|Plant fertilizer;Diamonds and graphite|Pencils|Coal and fuel;78% of the air|Fertilizers|Flash-freezing food;Breathing|Medical oxygen tanks|Welding and metal cutting;Toothpaste|Teflon pans|Refrigerant gas;Neon signs|Advertising lights|Lasers;Table salt|Orange street lamps|Soap;White fireworks|Lightweight car parts|Dietary supplements;Drink cans|Aluminium foil|Aircraft bodies;Computer chips|Solar panels|Sand and glass;Match heads|Fertilizers|Bones and DNA;Gunpowder|Car tyres|Rotten-egg smell;Pool disinfection|Bleach|Table salt;Inside light bulbs|Stainless-steel welding|Preserving old documents;Bananas|Fertilizers|Nerve and muscle function;Milk and bones|Cement and plaster|Chalk;Stadium lights|Bicycle alloys|Sports gear;Joint replacements|Aircraft parts|Luxury watches;Wrench steel|Flow batteries|Strong alloys;Shiny wheel plating|Stainless steel|Ruby red colour;Railway steel|Alkaline batteries|Food cans;Blood (haemoglobin)|Building frames|Cars and bridges;Blue ceramics|Lithium batteries|Magnets;Coins|Stainless steel|Hybrid car batteries;Electric wires|Cookware|Coins;Galvanised iron|Sunscreen|Immunity supplements;Melts in your hand|LED screens|Phone chips;Fibre-optic cables|Thermal cameras|Early transistors;Old pesticides|LED chips|Poison of detective novels;Anti-dandruff shampoo|Photocopiers|Dietary supplement;Flame retardants|Pool water|Dyes;Camera flash lamps|Research lasers|Insulating windows;Atomic clocks|Purple fireworks|Medical research;Red fireworks|Old TV screens|Magnets;YAG lasers|TV screens|White LED lights;Nuclear fuel cladding|Zircon jewellery|Dental crowns;MRI machines|Superconducting magnets|Jewellery;Tool steel|Jet engines|Lubricants;Top medical imaging agent|First artificial element ever;Luxury pen tips|Electronic circuits|Storage disks;Car exhausts|Shiny jewellery plating|One of the priciest metals;Catalytic converters|Phones|Dental fillings;Jewellery|Mirrors|Solar panels;NiCd batteries|Artists pigments|Very toxic;Touch screens|Flat-panel displays|Metal solder;Tin cans|Electronics solder|Bronze;Flame retardants|Batteries|Old printing type;Solar panels|Rewritable discs|Thermoelectric cooling;Iodine antiseptic|Iodised salt|Thyroid gland;Xenon car headlights|Spacecraft engines|Medical anaesthesia;Atomic clocks|Oil drilling|Defines the second;Barium meal before X-rays|Green fireworks|White paint;Camera lenses|Hybrid batteries|Studio lights;Lighter flints|Catalytic converters|Glass polishing;Green glass tint|Magnets|Welding goggles;Strongest magnets|Earphones|Wind turbines;Old glow-in-the-dark watches|Tiny nuclear batteries;Strong magnets|Lasers|Speakers;Red in TV screens|Banknote ink|Glows on euro notes;MRI contrast agent|Computer disks|Screens;Green light bulbs|Device screens|Lasers;Motor magnets|Reactor rods|Disks;Strongest magnetic field|Medical lasers|Glass colours;Internet fibre optics|Skin lasers|Pink glass;Portable X-ray units|Surgical lasers;Precise atomic clocks|Lasers|Steel;PET tumour scans|Lamps|Gemstones;Computer chips|Nuclear control rods|Plasma cutting;Phone capacitors|Medical devices|Jet engines;Bulb filaments|Drill bits|Ballpoint pen tips;Jet engines|Lamps|Disks;Among the densest elements|Pen tips|Fingerprint powder;Spark plugs|Pen tips|Alloys;Jewellery|Catalytic converters|Cancer drugs;Jewellery and bullion|Electronics|Dentistry;Old thermometers|Fluorescent lamps|Old dental fillings;Infrared sensors|Cardiac nuclear scans|Highly toxic;Car batteries|Radiation shielding|Diving weights;Stomach medicine (Pepto-Bismol)|Cosmetics|Easy-melting alloys;Static eliminators|Intense poison|Discovered by Marie Curie;Rarest element on Earth|Cancer therapy research;Radioactive gas in basements|Earthquake monitoring|Detectors;Rarest natural element|No commercial use;Old glow-in-the-dark watches|Radiotherapy|Discovered by Marie Curie;Cancer therapy|Neutron source;Future nuclear fuel|Old camping lanterns|Alloys;Very rare|Nuclear research;Nuclear power|Old glass colours|Nuclear submarines;Nuclear by-product|Research;Space probe batteries|Nuclear power;Smoke detectors;Spacecraft power|Research;New-element research;Oil and metal detection|Reactor start-up;Nuclear research|Found in test debris;Nuclear research;Named after Mendeleev;Named after Alfred Nobel;Research only;Named after Rutherford;Named after Dubna, Russia;Named after Seaborg;Named after Niels Bohr;Named after Hesse, Germany;Named after Lise Meitner;Named after Darmstadt;Named after Roentgen;Named after Copernicus;First element found in Asia (Japan);Named after the Flerov lab;Named after Moscow;Named after Livermore lab;Named after Tennessee;Heaviest known element".split(";");
+const lbl=document.querySelector(".lb");
+let ft="",cur=0,lang="en";
+function fill(){const i=cur,n=i+1,a=lang=="ar";let ex=(a?X:XE)[i].split("|");if(n>=104)ex=[a?"عنصر اصطناعي يتحلل خلال أجزاء من الثانية":"Synthetic, decays in a fraction of a second",...ex];hd.innerHTML=`<i>${n}</i><b>${N[i][0]}</b><s>${a?AR[i]:N[i][1]}</s>`;lst.innerHTML=ex.map(t=>`<div class="ex">${t}</div>`).join("");lbl.textContent=a?"أمثلة من الحياة الواقعية":"Real-life examples"}
+function setLang(l){lang=l;const a=l=="ar";document.body.classList.toggle("ar",a);document.documentElement.lang=l;tiles.forEach((t,i)=>t.d.querySelector("s").textContent=a?AR[i]:N[i][1]);document.getElementById("lg").textContent=a?"English":"العربية";document.getElementById("hint").textContent=a?"اضغط على عنصر • اسحب للتحريك • قرّب بإصبعين أو بالعجلة":"Tap an element • Drag to move • Pinch or scroll to zoom";if(sel)fill();try{localStorage.setItem("lang",l)}catch(e){}}
+function openEl(i,tl){
+ const[s,nm]=N[i],n=i+1,[c,l]=COL[key(n)];
+ cur=i;
+ cd.style.cssText=`--c:${c};--l:${l}`;
+ fill();
+ 
+ sel=true;exs.style.opacity=0;
+ const r=tl.getBoundingClientRect(),h=hd.getBoundingClientRect();
+ ft=`translate(${r.left+r.width/2-h.left-h.width/2}px,${r.top+r.height/2-h.top-h.height/2}px) scale(${Math.max(.05,r.width/h.width)})`;
+ cd.style.transformOrigin=`50% ${h.height/2}px`;cd.style.transition="none";cd.style.transform=ft;cd.offsetWidth;
+ cd.style.transition="transform .6s cubic-bezier(.2,.8,.2,1)";cd.style.transform="none";
+ exs.style.opacity=1;ov.classList.add("show");
+}
+function closeEl(){ov.classList.remove("show");cd.style.transform=ft;exs.style.opacity=0;setTimeout(()=>{if(!ov.classList.contains("show"))sel=false},550)}
+ov.onclick=closeEl;addEventListener("keydown",e=>{if(e.key=="Escape")closeEl()});
+let sl="en";try{sl=localStorage.getItem("lang")||"en"}catch(e){}
+document.getElementById("lg").onclick=()=>setLang(lang=="ar"?"en":"ar");
+setLang(sl);addEventListener("resize",fit);fit();go("table");requestAnimationFrame(frame);
+</script></body></html>
